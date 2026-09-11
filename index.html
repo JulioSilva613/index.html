@@ -8,17 +8,13 @@
 
   <style>
     * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+      margin: 0; padding: 0; box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      -webkit-user-select: none;
+      user-select: none; -webkit-user-select: none;
     }
 
     html, body {
-      height: 100%;
-      width: 100%;
+      height: 100%; width: 100%;
       overflow: hidden;
       background: #0a0a0a;
       font-family: 'Courier New', monospace;
@@ -28,98 +24,69 @@
     }
 
     #app {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
       overflow: hidden;
     }
 
     #vhsCanvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
       object-fit: cover;
       background: #111;
       z-index: 1;
     }
 
-    /* ---------- Indicadores flutuantes ---------- */
     .zoom-indicator {
       position: absolute;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 130px);
-      left: 50%;
-      transform: translateX(-50%);
+      left: 50%; transform: translateX(-50%);
       z-index: 15;
       background: rgba(0, 0, 0, 0.65);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      padding: 5px 16px;
-      border-radius: 20px;
-      font-size: 13px;
-      letter-spacing: 1px;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      padding: 5px 16px; border-radius: 20px;
+      font-size: 13px; letter-spacing: 1px;
       border: 1px solid rgba(255,255,255,0.12);
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s;
-      font-family: monospace;
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.3s; font-family: monospace;
     }
     .zoom-indicator.visible { opacity: 1; }
 
     .mode-indicator {
       position: absolute;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 95px);
-      left: 50%;
-      transform: translateX(-50%);
+      left: 50%; transform: translateX(-50%);
       z-index: 15;
       background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      padding: 4px 14px;
-      border-radius: 12px;
-      font-size: 11px;
-      letter-spacing: 2px;
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      padding: 4px 14px; border-radius: 12px;
+      font-size: 11px; letter-spacing: 2px;
       border: 1px solid rgba(255,255,255,0.08);
-      pointer-events: none;
-      font-family: monospace;
+      pointer-events: none; font-family: monospace;
       transition: all 0.3s;
     }
     .mode-indicator.photo-mode { color: #4fc3f7; border-color: rgba(79, 195, 247, 0.3); }
     .mode-indicator.video-mode { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.3); }
 
-    /* ---------- UI Overlay ---------- */
     .ui-overlay {
-      position: absolute;
-      inset: 0;
-      z-index: 10;
-      pointer-events: none;
+      position: absolute; inset: 0;
+      z-index: 10; pointer-events: none;
     }
 
     .ui-overlay .top {
       position: absolute;
       top: calc(env(safe-area-inset-top, 0px) + 15px);
-      left: 15px;
-      right: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      left: 15px; right: 15px;
+      display: flex; justify-content: space-between; align-items: center;
       font-size: 14px;
       text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
     }
 
-    .rec-indicator {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .rec-indicator { display: flex; align-items: center; gap: 10px; }
 
     .rec-dot {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
+      width: 14px; height: 14px; border-radius: 50%;
       background: #555;
       transition: background 0.2s, box-shadow 0.2s;
     }
@@ -129,73 +96,49 @@
       animation: blink 1s infinite;
     }
     @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+      0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
     }
 
     .timer {
-      font-size: 18px;
-      letter-spacing: 2px;
+      font-size: 18px; letter-spacing: 2px;
       background: rgba(0, 0, 0, 0.5);
-      padding: 2px 12px;
-      border-radius: 4px;
+      padding: 2px 12px; border-radius: 4px;
       backdrop-filter: blur(4px);
     }
-
-    .date {
-      opacity: 0.7;
-      font-size: 13px;
-    }
+    .date { opacity: 0.7; font-size: 13px; }
 
     .ui-overlay .mode {
       position: absolute;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 115px);
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 12px;
-      letter-spacing: 3px;
+      left: 0; right: 0; text-align: center;
+      font-size: 12px; letter-spacing: 3px;
       opacity: 0.5;
       text-shadow: 0 0 8px black;
     }
 
-    /* ---------- Botões inferiores ---------- */
     .ui-overlay .bottom {
       position: absolute;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 25px);
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 40px;
-      pointer-events: auto;
+      left: 0; right: 0;
+      display: flex; justify-content: center; align-items: center;
+      gap: 40px; pointer-events: auto;
     }
 
     .bottom button {
-      background: none;
-      border: none;
-      color: white;
-      cursor: pointer;
-      pointer-events: auto;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      transition: transform 0.1s;
-      outline: none;
+      background: none; border: none; color: white;
+      cursor: pointer; pointer-events: auto;
+      display: flex; justify-content: center; align-items: center;
+      transition: transform 0.1s; outline: none;
       -webkit-tap-highlight-color: transparent;
     }
     .bottom button:active { transform: scale(0.88); }
 
     .capture-btn {
-      width: 85px;
-      height: 85px;
-      border-radius: 50%;
+      width: 85px; height: 85px; border-radius: 50%;
       border: 4px solid rgba(255, 255, 255, 0.9);
       background: rgba(255, 255, 255, 0.15);
       box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.4), 0 0 35px rgba(255, 255, 255, 0.1);
-      font-size: 18px;
-      font-weight: bold;
+      font-size: 18px; font-weight: bold;
       color: rgba(255, 255, 255, 0.9);
     }
     .capture-btn.recording-mode {
@@ -204,108 +147,78 @@
     }
 
     .action-btn {
-      width: 55px;
-      height: 55px;
-      border-radius: 50%;
+      width: 55px; height: 55px; border-radius: 50%;
       background: rgba(20, 20, 20, 0.7);
       backdrop-filter: blur(4px);
       border: 1px solid rgba(255, 255, 255, 0.2);
       font-size: 22px;
     }
 
-    /* ---------- Painel de Configurações ---------- */
     #settingsPanel {
       position: absolute;
-      top: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; right: 0; bottom: 0;
       z-index: 30;
-      width: min(320px, 85vw);
-      background: rgba(10, 10, 10, 0.96);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      width: min(280px, 78vw);
+      background: rgba(10, 10, 10, 0.78);
+      backdrop-filter: blur(8px) saturate(1.2);
+      -webkit-backdrop-filter: blur(8px) saturate(1.2);
       border-left: 1px solid rgba(255, 255, 255, 0.12);
-      padding: 20px 18px calc(env(safe-area-inset-bottom, 0px) + 20px);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+      padding: 14px 12px calc(env(safe-area-inset-bottom, 0px) + 14px);
+      display: flex; flex-direction: column;
+      gap: 8px;
       pointer-events: auto;
-      font-size: 12px;
-      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.8);
+      font-size: 11px;
+      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       transform: translateX(100%);
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
       will-change: transform;
     }
     #settingsPanel.open { transform: translateX(0); }
 
     #settingsPanel h3 {
-      font-size: 13px;
-      letter-spacing: 2px;
+      font-size: 12px; letter-spacing: 2px;
       text-align: center;
       margin-bottom: 2px;
-      opacity: 0.7;
+      padding-top: 4px;
+      opacity: 0.75;
     }
 
     .settings-close {
       position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
+      top: 10px; right: 10px;
+      width: 28px; height: 28px; border-radius: 50%;
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.15);
-      color: #fff;
-      font-size: 16px;
+      color: #fff; font-size: 14px;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       pointer-events: auto;
     }
     .settings-close:active { transform: scale(0.9); }
 
-    .setting-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
+    .setting-item { display: flex; flex-direction: column; gap: 3px; }
 
     .setting-item label {
-      display: flex;
-      justify-content: space-between;
-      opacity: 0.65;
-      font-size: 11px;
+      display: flex; justify-content: space-between;
+      opacity: 0.7; font-size: 10px;
     }
 
     .setting-item input[type="range"] {
-      width: 100%;
-      height: 4px;
-      -webkit-appearance: none;
-      appearance: none;
-      background: #333;
-      border-radius: 2px;
-      outline: none;
+      width: 100%; height: 3px;
+      -webkit-appearance: none; appearance: none;
+      background: #333; border-radius: 2px; outline: none;
     }
     .setting-item input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #fff;
-      cursor: pointer;
-      box-shadow: 0 0 10px rgba(255,255,255,0.3);
+      -webkit-appearance: none; appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; cursor: pointer;
+      box-shadow: 0 0 8px rgba(255,255,255,0.3);
     }
     .setting-item input[type="range"]::-moz-range-thumb {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #fff;
-      cursor: pointer;
-      border: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; cursor: pointer; border: none;
     }
 
     .settings-divider {
@@ -315,63 +228,44 @@
     }
 
     .orientation-buttons {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      margin-top: 2px;
+      display: flex; gap: 6px;
+      justify-content: center; margin-top: 2px;
     }
 
     .orientation-btn {
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.15);
-      color: #fff;
-      padding: 8px 6px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-family: monospace;
-      font-size: 11px;
-      transition: all 0.2s;
-      pointer-events: auto;
-      flex: 1;
+      color: #fff; padding: 6px 4px;
+      border-radius: 4px; cursor: pointer;
+      font-family: monospace; font-size: 10px;
+      transition: all 0.2s; pointer-events: auto; flex: 1;
     }
     .orientation-btn.active {
-      background: rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.2);
       border-color: rgba(255,255,255,0.5);
     }
     .orientation-btn:active { transform: scale(0.95); }
-    .orientation-btn .icon { font-size: 16px; display: block; margin-bottom: 2px; }
+    .orientation-btn .icon { font-size: 14px; display: block; margin-bottom: 1px; }
 
     .mode-toggle-btn {
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.15);
-      color: #fff;
-      padding: 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-family: monospace;
-      font-size: 12px;
-      transition: all 0.2s;
-      pointer-events: auto;
-      width: 100%;
-      text-align: center;
-      letter-spacing: 1px;
+      color: #fff; padding: 8px;
+      border-radius: 4px; cursor: pointer;
+      font-family: monospace; font-size: 11px;
+      transition: all 0.2s; pointer-events: auto;
+      width: 100%; text-align: center; letter-spacing: 1px;
     }
     .mode-toggle-btn.photo { color: #4fc3f7; border-color: rgba(79, 195, 247, 0.3); background: rgba(79, 195, 247, 0.05); }
     .mode-toggle-btn.video { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.3); background: rgba(255, 107, 107, 0.05); }
     .mode-toggle-btn:active { transform: scale(0.97); }
 
-    /* ---------- Tela inicial ---------- */
     #startupScreen {
-      position: absolute;
-      inset: 0;
-      z-index: 100;
+      position: absolute; inset: 0; z-index: 100;
       background: #050505;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      gap: 20px;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      text-align: center; gap: 20px;
       transition: opacity 0.4s;
     }
     #startupScreen.hidden { opacity: 0; pointer-events: none; }
@@ -381,18 +275,13 @@
       padding: 14px 35px;
       border: 1px solid rgba(255, 255, 255, 0.3);
       background: rgba(255, 255, 255, 0.05);
-      color: #fff;
-      font-family: 'Courier New', monospace;
-      letter-spacing: 3px;
-      cursor: pointer;
-      transition: background 0.2s;
-      border-radius: 4px;
-      font-size: 14px;
-      pointer-events: auto;
+      color: #fff; font-family: 'Courier New', monospace;
+      letter-spacing: 3px; cursor: pointer;
+      transition: background 0.2s; border-radius: 4px;
+      font-size: 14px; pointer-events: auto;
     }
     #startupScreen .start-btn:active { background: rgba(255, 255, 255, 0.12); }
 
-    /* ---------- Toast ---------- */
     .toast {
       position: fixed;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 130px);
@@ -400,12 +289,9 @@
       transform: translateX(-50%) translateY(20px);
       z-index: 200;
       background: rgba(0, 0, 0, 0.88);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      color: #fff;
-      padding: 10px 24px;
-      border-radius: 8px;
-      font-family: monospace;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      color: #fff; padding: 10px 24px;
+      border-radius: 8px; font-family: monospace;
       font-size: 12px;
       border: 1px solid rgba(255,255,255,0.12);
       opacity: 0;
@@ -416,33 +302,27 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* Scrollbar */
     #settingsPanel::-webkit-scrollbar { width: 4px; }
     #settingsPanel::-webkit-scrollbar-track { background: transparent; }
     #settingsPanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
-    /* ---------- Overlay para fechar painel ---------- */
     #panelBackdrop {
-      position: absolute;
-      inset: 0;
-      z-index: 25;
-      background: rgba(0,0,0,0.5);
-      opacity: 0;
-      pointer-events: none;
+      position: absolute; inset: 0; z-index: 25;
+      background: transparent;
+      opacity: 0; pointer-events: none;
       transition: opacity 0.3s;
     }
     #panelBackdrop.open { opacity: 1; pointer-events: auto; }
 
-    /* ---------- Ajustes para telas pequenas ---------- */
     @media (max-width: 480px) {
       .ui-overlay .top { font-size: 12px; }
       .capture-btn { width: 72px; height: 72px; }
       .action-btn { width: 48px; height: 48px; font-size: 18px; }
       .ui-overlay .bottom { gap: 28px; }
       #startupScreen h1 { font-size: 38px; }
+      #settingsPanel { width: min(260px, 82vw); }
     }
 
-    /* Paisagem em celular */
     @media (max-height: 500px) and (orientation: landscape) {
       .ui-overlay .bottom { bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); gap: 24px; }
       .capture-btn { width: 60px; height: 60px; font-size: 14px; }
@@ -484,17 +364,15 @@
       <h3>🎛️ CONTROLES VHS</h3>
 
       <hr class="settings-divider">
-
       <button class="mode-toggle-btn photo" id="modeToggleBtn">📷 MODO FOTO</button>
-
       <hr class="settings-divider">
 
       <div class="setting-item">
         <label><span>🔄 Orientação</span></label>
         <div class="orientation-buttons">
-          <button class="orientation-btn" id="flipHorizontal"><span class="icon">↔</span>Horizontal</button>
-          <button class="orientation-btn" id="flipVertical"><span class="icon">↕</span>Vertical</button>
-          <button class="orientation-btn" id="resetOrientation"><span class="icon">⟳</span>Reset</button>
+          <button class="orientation-btn" id="flipHorizontal"><span class="icon">↔</span>H</button>
+          <button class="orientation-btn" id="flipVertical"><span class="icon">↕</span>V</button>
+          <button class="orientation-btn" id="resetOrientation"><span class="icon">⟳</span>R</button>
         </div>
       </div>
 
@@ -505,10 +383,8 @@
         <input type="range" id="zoomSlider" min="10" max="40" value="20">
       </div>
 
-      <hr class="settings-divider">
-
       <div class="setting-item">
-        <label><span>☀️ Iluminação</span><span id="brightnessVal">100%</span></label>
+        <label><span>☀️ Luz</span><span id="brightnessVal">100%</span></label>
         <input type="range" id="brightnessSlider" min="30" max="200" value="100">
       </div>
 
@@ -520,17 +396,15 @@
       <hr class="settings-divider">
 
       <div class="setting-item">
-        <label><span>🔴 Vermelho</span><span id="redVal">100%</span></label>
+        <label><span>🔴 R</span><span id="redVal">100%</span></label>
         <input type="range" id="redSlider" min="50" max="200" value="100">
       </div>
-
       <div class="setting-item">
-        <label><span>🟢 Verde</span><span id="greenVal">100%</span></label>
+        <label><span>🟢 G</span><span id="greenVal">100%</span></label>
         <input type="range" id="greenSlider" min="50" max="200" value="100">
       </div>
-
       <div class="setting-item">
-        <label><span>🔵 Azul</span><span id="blueVal">100%</span></label>
+        <label><span>🔵 B</span><span id="blueVal">100%</span></label>
         <input type="range" id="blueSlider" min="50" max="200" value="100">
       </div>
 
@@ -540,17 +414,14 @@
         <label><span>📺 Ruído</span><span id="noiseVal">15%</span></label>
         <input type="range" id="noiseSlider" min="0" max="40" value="15">
       </div>
-
       <div class="setting-item">
         <label><span>🌈 Cromático</span><span id="chromaVal">20%</span></label>
         <input type="range" id="chromaSlider" min="0" max="50" value="20">
       </div>
-
       <div class="setting-item">
         <label><span>📳 Trepidação</span><span id="jitterVal">8%</span></label>
         <input type="range" id="jitterSlider" min="0" max="15" value="8">
       </div>
-
       <div class="setting-item">
         <label><span>〰️ Scanlines</span><span id="scanVal">12%</span></label>
         <input type="range" id="scanSlider" min="0" max="30" value="12">
@@ -571,23 +442,19 @@
     (function() {
       "use strict";
 
-      // ============================================================
-      // 1. ELEMENTOS
-      // ============================================================
-      const canvas = document.getElementById('vhsCanvas');
+      const $ = (id) => document.getElementById(id);
+      const canvas = $('vhsCanvas');
+
       const gl = canvas.getContext('webgl', {
         alpha: false,
         antialias: false,
-        preserveDrawingBuffer: true,
-        powerPreference: 'high-performance'
+        preserveDrawingBuffer: false,
+        powerPreference: 'high-performance',
+        desynchronized: true
       });
 
-      if (!gl) {
-        alert('WebGL não suportado neste dispositivo.');
-        return;
-      }
+      if (!gl) { alert('WebGL não suportado.'); return; }
 
-      const $ = (id) => document.getElementById(id);
       const startupScreen = $('startupScreen');
       const startBtn = $('startBtn');
       const captureBtn = $('captureBtn');
@@ -610,21 +477,13 @@
       const resetAllBtn = $('resetAllBtn');
 
       // ============================================================
-      // 2. ESTADO
+      // ESTADO
       // ============================================================
       const DEFAULT_SETTINGS = {
-        zoom: 1.0,
-        brightness: 1.0,
-        contrast: 1.0,
-        red: 1.0,
-        green: 1.0,
-        blue: 1.0,
-        noise: 0.15,
-        chroma: 0.20,
-        jitter: 0.08,
-        scanlines: 0.12,
-        flipH: false,
-        flipV: false
+        zoom: 1.0, brightness: 1.0, contrast: 1.0,
+        red: 1.0, green: 1.0, blue: 1.0,
+        noise: 0.15, chroma: 0.20, jitter: 0.08, scanlines: 0.12,
+        flipH: false, flipV: false
       };
 
       let settings = { ...DEFAULT_SETTINGS };
@@ -646,9 +505,15 @@
       let toastTimeout = null;
       let tapeEffectTimeout = null;
       let isStarting = false;
+      let lastFrameTime = 0;
+      let cameraWarmupUntil = 0; // timestamp até quando ignorar frames de warm-up
+
+      // Resolução interna fixa (mesma para ambas as câmeras → FPS igual)
+      const RENDER_W = 1280;
+      const RENDER_H = 720;
 
       // ============================================================
-      // 3. WEBGL
+      // WEBGL
       // ============================================================
       function initWebGL() {
         const vsSource = `
@@ -665,8 +530,12 @@
           }
         `;
 
+        // Shader com:
+        //  - Denoise suave (média 3x3 leve) para compensar ruído da câmera traseira
+        //  - Sharpen leve (unsharp mask) para compensar downscale
+        //  - Filtros VHS aplicados DEPOIS da limpeza
         const fsSource = `
-          precision highp float;
+          precision mediump float;
           varying vec2 vUv;
           uniform sampler2D uTexture;
           uniform float uTime;
@@ -681,14 +550,25 @@
           uniform float uJitter;
           uniform float uScanlines;
           uniform vec2 uResolution;
+          uniform vec2 uTexel;
 
           float random(vec2 st) {
             return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
           }
 
+          // Denoise 3x3 rápido (só 5 amostras em cruz — mais barato)
+          vec3 denoise(vec2 uv) {
+            vec3 c = texture2D(uTexture, uv).rgb;
+            vec3 n = texture2D(uTexture, uv + vec2(0.0, uTexel.y)).rgb;
+            vec3 s = texture2D(uTexture, uv - vec2(0.0, uTexel.y)).rgb;
+            vec3 e = texture2D(uTexture, uv + vec2(uTexel.x, 0.0)).rgb;
+            vec3 w = texture2D(uTexture, uv - vec2(uTexel.x, 0.0)).rgb;
+            // Média ponderada: centro pesa mais
+            return c * 0.4 + (n + s + e + w) * 0.15;
+          }
+
           void main() {
             vec2 uv = vUv;
-            vec2 res = uResolution;
             float time = uTime;
 
             // Zoom
@@ -700,48 +580,60 @@
               return;
             }
 
-            // Jitter
-            float jitterAmount = uJitter * 0.04;
-            uv.x += (random(vec2(time * 0.1, floor(uv.y * 240.0))) - 0.5) * jitterAmount;
+            // Ruído pseudoaleatório único por pixel (economiza)
+            float rnd = random(vec2(time * 0.1, floor(uv.y * 240.0)));
 
-            // Tracking
-            uv.y += (random(vec2(time * 0.05, floor(uv.x * 320.0))) - 0.5) * 0.002;
+            // Jitter horizontal
+            uv.x += (rnd - 0.5) * uJitter * 0.04;
 
-            // Aberração cromática
-            float chromaShift = uChroma * 0.008;
+            // Tracking vertical
+            uv.y += (rnd - 0.5) * 0.0015;
+
+            // ---- Limpeza da imagem (só na câmera traseira, mas aplicamos em ambas para uniformidade) ----
+            // Se o denoise ficar muito pesado, reduza o mix abaixo.
+            vec3 centerSample = texture2D(uTexture, uv).rgb;
+            vec3 denoised = denoise(uv);
+            // 55% original + 45% denoised (preserva detalhe mas limpa ruído)
+            vec3 cleaned = mix(centerSample, denoised, 0.45);
+
+            // Sharpen (unsharp mask leve)
+            vec3 blur = denoise(uv);
+            vec3 sharpened = cleaned + (cleaned - blur) * 0.35;
+
+            // Aberração cromática sobre a imagem limpa
+            float chromaShift = uChroma * 0.006;
             float r = texture2D(uTexture, uv + vec2(chromaShift, 0.0)).r;
-            float g = texture2D(uTexture, uv).g;
+            float g = sharpened.g;
             float b = texture2D(uTexture, uv - vec2(chromaShift, 0.0)).b;
             vec3 color = vec3(r, g, b);
 
+            // Canais RGB
             color.r *= uRed;
             color.g *= uGreen;
             color.b *= uBlue;
 
+            // Contraste e brilho
             color = (color - 0.5) * uContrast + 0.5;
             color *= uBrightness;
 
-            color.r *= 1.05;
-            color.b *= 0.92;
+            // Tom VHS
+            color.r *= 1.04;
+            color.b *= 0.94;
 
+            // Saturação
             float gray = dot(color, vec3(0.299, 0.587, 0.114));
-            color = mix(vec3(gray), color, 0.88);
+            color = mix(vec3(gray), color, 0.9);
 
-            float noise = (random(uv + time * 0.2) - 0.5) * uNoise * 0.35;
+            // Ruído VHS
+            float noise = (rnd - 0.5) * uNoise * 0.3;
             color += noise;
 
-            float flicker = 1.0 + sin(time * 8.0) * 0.015;
-            color *= flicker;
+            // Flicker
+            color *= 1.0 + sin(time * 8.0) * 0.012;
 
-            float scanline = sin(uv.y * res.y * 0.5) * 0.5 + 0.5;
-            scanline = smoothstep(0.0, 0.3, scanline);
-            float scanIntensity = uScanlines * 0.25;
-            color *= (1.0 - scanIntensity) + scanline * scanIntensity;
-
-            vec2 distToEdge = 1.0 - abs(uv - 0.5) * 2.0;
-            float edge = min(distToEdge.x, distToEdge.y);
-            edge = smoothstep(0.0, 0.05, edge);
-            color *= edge;
+            // Scanlines
+            float scanline = sin(uv.y * uResolution.y * 0.6);
+            color *= 1.0 - uScanlines * 0.15 * (scanline * 0.5 + 0.5);
 
             gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
           }
@@ -803,31 +695,27 @@
           jitterLocation: loc('uJitter'),
           scanLocation: loc('uScanlines'),
           resolutionLocation: loc('uResolution'),
+          texelLocation: loc('uTexel'),
           positionBuffer
         };
       }
 
-      // ============================================================
-      // 4. CANVAS / RENDER
-      // ============================================================
       function resizeCanvas() {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const w = Math.floor(window.innerWidth * dpr);
-        const h = Math.floor(window.innerHeight * dpr);
-        if (canvas.width !== w || canvas.height !== h) {
-          canvas.width = w;
-          canvas.height = h;
+        if (canvas.width !== RENDER_W || canvas.height !== RENDER_H) {
+          canvas.width = RENDER_W;
+          canvas.height = RENDER_H;
         }
-        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.viewport(0, 0, RENDER_W, RENDER_H);
       }
 
-      function renderFrame(time = 0) {
-        if (!isRendering) return;
+      // ============================================================
+      // RENDER
+      // ============================================================
+      function drawFrame(time) {
+        if (!glProgram || !videoElement || !isCameraReady) return;
 
-        if (!glProgram || !videoElement || !isCameraReady) {
-          animationFrame = requestAnimationFrame(renderFrame);
-          return;
-        }
+        // Ignora frames durante warm-up da câmera (evita frames pretos/borrados)
+        if (performance.now() < cameraWarmupUntil) return;
 
         const p = glProgram;
 
@@ -835,14 +723,10 @@
           gl.bindTexture(gl.TEXTURE_2D, videoTexture);
           try {
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoElement);
-          } catch (e) {
-            // Ignora erro de frame não pronto
-          }
+          } catch (e) { /* frame não pronto */ }
         }
 
-        const w = canvas.width;
-        const h = canvas.height;
-        gl.viewport(0, 0, w, h);
+        gl.viewport(0, 0, RENDER_W, RENDER_H);
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -865,36 +749,46 @@
         gl.uniform1f(p.chromaLocation, settings.chroma);
         gl.uniform1f(p.jitterLocation, settings.jitter);
         gl.uniform1f(p.scanLocation, settings.scanlines);
-        gl.uniform2f(p.resolutionLocation, w, h);
+        gl.uniform2f(p.resolutionLocation, RENDER_W, RENDER_H);
+        // Texel size para o denoise (1 pixel do vídeo original)
+        const vw = videoElement.videoWidth || 1280;
+        const vh = videoElement.videoHeight || 720;
+        gl.uniform2f(p.texelLocation, 1.0 / vw, 1.0 / vh);
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
 
-        animationFrame = requestAnimationFrame(renderFrame);
+      function renderLoop(time) {
+        if (!isRendering) return;
+
+        const elapsed = time - lastFrameTime;
+        if (elapsed >= 30) {
+          lastFrameTime = time;
+          drawFrame(time);
+        }
+
+        animationFrame = requestAnimationFrame(renderLoop);
       }
 
       // ============================================================
-      // 5. CÂMERA
+      // CÂMERA — resolução IGUAL para ambas (720p)
       // ============================================================
       async function startCamera() {
         if (isStarting) return;
         isStarting = true;
 
         try {
-          // Para stream anterior
-          if (stream) {
-            stream.getTracks().forEach(t => t.stop());
-            stream = null;
-          }
-          if (videoElement) {
-            videoElement.srcObject = null;
-          }
+          if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+          if (videoElement) videoElement.srcObject = null;
 
+          // 720p exato para AMBAS as câmeras → mesmo FPS, mesma qualidade
+          // Em muitos celulares, forçar 720p na traseira evita o modo 1080p@15fps
           const constraints = {
             video: {
               facingMode: { ideal: facingMode },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              frameRate: { ideal: 30 }
+              width: { exact: 1280 },
+              height: { exact: 720 },
+              frameRate: { ideal: 30, max: 30 }
             },
             audio: {
               echoCancellation: false,
@@ -903,7 +797,25 @@
             }
           };
 
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+          } catch (e) {
+            // Fallback: alguns devices não suportam "exact" — tenta "ideal"
+            console.warn('Fallback para constraints ideais:', e);
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: { ideal: facingMode },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 }
+              },
+              audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+              }
+            });
+          }
 
           if (!videoElement) {
             videoElement = document.createElement('video');
@@ -911,7 +823,6 @@
             videoElement.playsInline = true;
             videoElement.setAttribute('playsinline', '');
             videoElement.setAttribute('webkit-playsinline', '');
-            // MUITO IMPORTANTE: muted para evitar feedback de áudio no celular
             videoElement.muted = true;
             videoElement.volume = 0;
           }
@@ -924,8 +835,10 @@
           });
 
           await videoElement.play().catch(() => {});
-
           isCameraReady = true;
+
+          // Warm-up: aguarda ~400ms para a câmera estabilizar exposição/foco
+          cameraWarmupUntil = performance.now() + 400;
 
           if (!glProgram) {
             glProgram = initWebGL();
@@ -934,22 +847,22 @@
 
           resizeCanvas();
 
-          // Para render anterior
           if (isRendering) {
             isRendering = false;
             if (animationFrame) cancelAnimationFrame(animationFrame);
           }
           isRendering = true;
-          animationFrame = requestAnimationFrame(renderFrame);
+          lastFrameTime = 0;
+          animationFrame = requestAnimationFrame(renderLoop);
 
           startupScreen.classList.add('hidden');
-
           updateDate();
+
+          console.log(`📷 Câmera ativa: ${facingMode} @ ${videoElement.videoWidth}x${videoElement.videoHeight}`);
 
         } catch (error) {
           console.error('Erro ao acessar câmera:', error);
           showToast('❌ Não foi possível acessar a câmera', 3000);
-          // Volta para tela inicial
           startupScreen.classList.remove('hidden');
         } finally {
           isStarting = false;
@@ -959,70 +872,32 @@
       function stopCamera() {
         isCameraReady = false;
         isRendering = false;
-        if (animationFrame) {
-          cancelAnimationFrame(animationFrame);
-          animationFrame = null;
-        }
-        if (stream) {
-          stream.getTracks().forEach(t => t.stop());
-          stream = null;
-        }
+        if (animationFrame) { cancelAnimationFrame(animationFrame); animationFrame = null; }
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
       }
 
       // ============================================================
-      // 6. TOAST
+      // TOAST
       // ============================================================
       function showToast(message, duration = 2500) {
         toast.textContent = message;
         toast.classList.add('show');
         if (toastTimeout) clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => {
-          toast.classList.remove('show');
-        }, duration);
+        toastTimeout = setTimeout(() => toast.classList.remove('show'), duration);
       }
 
       // ============================================================
-      // 7. CAPTURA DE FOTO
+      // CAPTURA DE FOTO
       // ============================================================
-      function canvasToBlob() {
+      function captureFrame() {
+        drawFrame(performance.now());
         return new Promise((resolve, reject) => {
           try {
-            // Force um render final para garantir buffer atualizado
-            if (glProgram && videoElement && isCameraReady) {
-              const p = glProgram;
-              gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-              if (videoElement.readyState >= videoElement.HAVE_CURRENT_DATA) {
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoElement);
-              }
-              gl.viewport(0, 0, canvas.width, canvas.height);
-              gl.useProgram(p.program);
-              gl.bindBuffer(gl.ARRAY_BUFFER, p.positionBuffer);
-              gl.enableVertexAttribArray(p.positionLocation);
-              gl.vertexAttribPointer(p.positionLocation, 2, gl.FLOAT, false, 0, 0);
-              gl.uniform1i(p.textureLocation, 0);
-              gl.uniform1f(p.timeLocation, performance.now() / 1000);
-              gl.uniform1f(p.flipHLocation, settings.flipH ? 1 : 0);
-              gl.uniform1f(p.flipVLocation, settings.flipV ? 1 : 0);
-              gl.uniform1f(p.zoomLocation, settings.zoom);
-              gl.uniform1f(p.brightnessLocation, settings.brightness);
-              gl.uniform1f(p.contrastLocation, settings.contrast);
-              gl.uniform1f(p.redLocation, settings.red);
-              gl.uniform1f(p.greenLocation, settings.green);
-              gl.uniform1f(p.blueLocation, settings.blue);
-              gl.uniform1f(p.noiseLocation, settings.noise);
-              gl.uniform1f(p.chromaLocation, settings.chroma);
-              gl.uniform1f(p.jitterLocation, settings.jitter);
-              gl.uniform1f(p.scanLocation, settings.scanlines);
-              gl.uniform2f(p.resolutionLocation, canvas.width, canvas.height);
-              gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            }
             canvas.toBlob((blob) => {
               if (blob) resolve(blob);
               else reject(new Error('Falha ao gerar blob'));
             }, 'image/jpeg', 0.95);
-          } catch (e) {
-            reject(e);
-          }
+          } catch (e) { reject(e); }
         });
       }
 
@@ -1040,13 +915,11 @@
       async function takePhoto() {
         if (isRecording) return;
         try {
-          const blob = await canvasToBlob();
+          const blob = await captureFrame();
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-          const fileName = `VHS_FOTO_${timestamp}.jpg`;
-          downloadBlob(blob, fileName);
-          showToast(`✅ Foto salva`, 2500);
+          downloadBlob(blob, `VHS_FOTO_${timestamp}.jpg`);
+          showToast('✅ Foto salva', 2500);
 
-          // Flash visual
           const flash = document.createElement('div');
           flash.style.cssText = 'position:absolute;inset:0;z-index:50;background:white;opacity:0.85;pointer-events:none;transition:opacity 0.2s;';
           document.getElementById('app').appendChild(flash);
@@ -1061,7 +934,7 @@
       }
 
       // ============================================================
-      // 8. GRAVAÇÃO DE VÍDEO
+      // GRAVAÇÃO
       // ============================================================
       function startRecording() {
         if (isRecording || !stream) return;
@@ -1069,9 +942,7 @@
         try {
           const canvasStream = canvas.captureStream(30);
           const audioTracks = stream.getAudioTracks();
-          if (audioTracks.length > 0) {
-            canvasStream.addTrack(audioTracks[0]);
-          }
+          if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
           const mimeTypes = [
             'video/webm;codecs=vp9,opus',
@@ -1083,10 +954,7 @@
           ];
           let mimeType = '';
           for (const t of mimeTypes) {
-            if (MediaRecorder.isTypeSupported(t)) {
-              mimeType = t;
-              break;
-            }
+            if (MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
           }
 
           recordedChunks = [];
@@ -1104,9 +972,8 @@
               const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
               const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
               const ext = (mediaRecorder.mimeType || '').includes('mp4') ? 'mp4' : 'webm';
-              const fileName = `VHS_VIDEO_${timestamp}.${ext}`;
-              downloadBlob(blob, fileName);
-              showToast(`✅ Vídeo salvo`, 2500);
+              downloadBlob(blob, `VHS_VIDEO_${timestamp}.${ext}`);
+              showToast('✅ Vídeo salvo', 2500);
             } catch (e) {
               console.error('Erro ao salvar vídeo:', e);
               showToast('❌ Erro ao salvar vídeo', 2000);
@@ -1149,14 +1016,9 @@
 
       function stopRecording() {
         if (!isRecording || !mediaRecorder) return;
-
         try {
-          if (mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-          }
-        } catch (e) {
-          console.warn('Erro ao parar gravação:', e);
-        }
+          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        } catch (e) { console.warn(e); }
 
         isRecording = false;
         recDot.classList.remove('recording');
@@ -1165,10 +1027,7 @@
         captureBtn.classList.remove('recording-mode');
         timerDisplay.style.display = 'none';
 
-        if (timerInterval) {
-          clearInterval(timerInterval);
-          timerInterval = null;
-        }
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
         timerDisplay.textContent = '00:00';
 
         showToast('💾 Salvando...', 2000);
@@ -1176,32 +1035,28 @@
       }
 
       function handleCapture() {
-        if (isRecording) {
-          stopRecording();
-        } else if (captureMode === 'photo') {
-          takePhoto();
-        } else {
-          startRecording();
-        }
+        if (isRecording) stopRecording();
+        else if (captureMode === 'photo') takePhoto();
+        else startRecording();
       }
 
       // ============================================================
-      // 9. PINCH ZOOM (CORRIGIDO)
+      // PINCH ZOOM
       // ============================================================
       let lastTouchDistance = 0;
-      let initialZoom = 1.0;
       let isPinching = false;
 
       function getTouchDistance(touches) {
         if (touches.length < 2) return 0;
-        const dx = touches[0].clientX - touches[1].clientX;
-        const dy = touches[0].clientY - touches[1].clientY;
-        return Math.hypot(dx, dy);
+        return Math.hypot(
+          touches[0].clientX - touches[1].clientX,
+          touches[0].clientY - touches[1].clientY
+        );
       }
 
       function updateZoomUI(z) {
-        zoomSlider.value = Math.min(40, Math.max(10, Math.round((z - 0.5) / 3.5 * 30 + 10)));
-        zoomVal.textContent = z.toFixed(1) + 'x';
+        $('zoomSlider').value = Math.min(40, Math.max(10, Math.round((z - 0.5) / 3.5 * 30 + 10)));
+        $('zoomVal').textContent = z.toFixed(1) + 'x';
         zoomIndicator.textContent = z.toFixed(1) + 'x';
         zoomIndicator.classList.add('visible');
         if (zoomTimeout) clearTimeout(zoomTimeout);
@@ -1212,7 +1067,6 @@
         if (e.touches.length === 2) {
           isPinching = true;
           lastTouchDistance = getTouchDistance(e.touches);
-          initialZoom = settings.zoom;
           zoomIndicator.classList.add('visible');
           zoomIndicator.textContent = settings.zoom.toFixed(1) + 'x';
         }
@@ -1222,14 +1076,11 @@
         if (e.touches.length === 2 && isPinching) {
           e.preventDefault();
           const distance = getTouchDistance(e.touches);
-          // Delta RELATIVO ao último move, não ao início
           const delta = distance - lastTouchDistance;
           lastTouchDistance = distance;
 
-          const zoomDelta = delta * 0.01;
-          const newZoom = Math.max(0.5, Math.min(4.0, settings.zoom + zoomDelta));
-          settings.zoom = newZoom;
-          updateZoomUI(newZoom);
+          settings.zoom = Math.max(0.5, Math.min(4.0, settings.zoom + delta * 0.01));
+          updateZoomUI(settings.zoom);
         }
       }, { passive: false });
 
@@ -1242,7 +1093,7 @@
       }, { passive: true });
 
       // ============================================================
-      // 10. EVENT LISTENERS
+      // EVENTOS
       // ============================================================
       startBtn.addEventListener('click', startCamera);
       captureBtn.addEventListener('click', handleCapture);
@@ -1259,31 +1110,20 @@
         panelBackdrop.classList.add('open');
         if (navigator.vibrate) navigator.vibrate(15);
       }
-
       function closeSettings() {
         settingsPanel.classList.remove('open');
         panelBackdrop.classList.remove('open');
       }
 
       settingsBtn.addEventListener('click', () => {
-        if (settingsPanel.classList.contains('open')) closeSettings();
-        else openSettings();
+        settingsPanel.classList.contains('open') ? closeSettings() : openSettings();
       });
-
       settingsClose.addEventListener('click', closeSettings);
       panelBackdrop.addEventListener('click', closeSettings);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSettings(); });
 
-      // Fechar painel com ESC
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeSettings();
-      });
-
-      // ============================================================
-      // 11. MODO DE CAPTURA
-      // ============================================================
       modeToggleBtn.addEventListener('click', () => {
         if (isRecording) stopRecording();
-
         if (captureMode === 'photo') {
           captureMode = 'video';
           modeToggleBtn.textContent = '🎥 MODO VÍDEO';
@@ -1300,50 +1140,36 @@
         if (navigator.vibrate) navigator.vibrate(20);
       });
 
-      // ============================================================
-      // 12. ORIENTAÇÃO
-      // ============================================================
       function updateOrientationButtons() {
         flipHorizontalBtn.classList.toggle('active', settings.flipH);
         flipVerticalBtn.classList.toggle('active', settings.flipV);
       }
-
       flipHorizontalBtn.addEventListener('click', () => {
         settings.flipH = !settings.flipH;
         updateOrientationButtons();
         if (navigator.vibrate) navigator.vibrate(15);
       });
-
       flipVerticalBtn.addEventListener('click', () => {
         settings.flipV = !settings.flipV;
         updateOrientationButtons();
         if (navigator.vibrate) navigator.vibrate(15);
       });
-
       resetOrientationBtn.addEventListener('click', () => {
-        settings.flipH = false;
-        settings.flipV = false;
+        settings.flipH = false; settings.flipV = false;
         updateOrientationButtons();
         if (navigator.vibrate) navigator.vibrate(15);
       });
 
-      // ============================================================
-      // 13. SLIDERS
-      // ============================================================
       function bindSlider(slider, display, key, transform, format) {
         slider.addEventListener('input', () => {
-          const rawVal = parseFloat(slider.value);
-          const val = transform(rawVal);
+          const val = transform(parseFloat(slider.value));
           settings[key] = val;
           display.textContent = format(val);
           if (key === 'zoom') updateZoomUI(val);
         });
       }
 
-      bindSlider($('zoomSlider'), $('zoomVal'), 'zoom',
-        (v) => 0.5 + (v - 10) / 30 * 3.5,
-        (v) => v.toFixed(1) + 'x'
-      );
+      bindSlider($('zoomSlider'), $('zoomVal'), 'zoom', (v) => 0.5 + (v - 10) / 30 * 3.5, (v) => v.toFixed(1) + 'x');
       bindSlider($('brightnessSlider'), $('brightnessVal'), 'brightness', (v) => v / 100, (v) => Math.round(v * 100) + '%');
       bindSlider($('contrastSlider'), $('contrastVal'), 'contrast', (v) => v / 100, (v) => Math.round(v * 100) + '%');
       bindSlider($('redSlider'), $('redVal'), 'red', (v) => v / 100, (v) => Math.round(v * 100) + '%');
@@ -1356,7 +1182,6 @@
 
       resetAllBtn.addEventListener('click', () => {
         settings = { ...DEFAULT_SETTINGS };
-        // Atualiza sliders
         $('zoomSlider').value = 20; $('zoomVal').textContent = '1.0x';
         $('brightnessSlider').value = 100; $('brightnessVal').textContent = '100%';
         $('contrastSlider').value = 100; $('contrastVal').textContent = '100%';
@@ -1372,39 +1197,23 @@
         if (navigator.vibrate) navigator.vibrate(20);
       });
 
-      // ============================================================
-      // 14. RESIZE / ORIENTAÇÃO DA TELA
-      // ============================================================
       let resizeTimeout = null;
       window.addEventListener('resize', () => {
         if (resizeTimeout) clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(resizeCanvas, 150);
       });
+      window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 300));
 
-      window.addEventListener('orientationchange', () => {
-        setTimeout(resizeCanvas, 300);
-      });
-
-      // ============================================================
-      // 15. EFEITOS DE FITA (com cleanup)
-      // ============================================================
       function randomTapeEffect() {
-        if (!isCameraReady) {
-          tapeEffectTimeout = setTimeout(randomTapeEffect, 500);
-          return;
-        }
-        if (Math.random() < 0.005) {
+        if (isCameraReady && Math.random() < 0.005) {
           const tracking = document.createElement('div');
           tracking.style.cssText = `
-            position: absolute;
-            left: 0; right: 0;
-            height: 2px;
-            z-index: 8;
+            position: absolute; left: 0; right: 0;
+            height: 2px; z-index: 8;
             background: rgba(255,255,255,0.6);
             box-shadow: 0 0 15px rgba(255,255,255,0.8);
             top: ${5 + Math.random() * 85}%;
-            opacity: 1;
-            transition: all 0.3s;
+            opacity: 1; transition: all 0.3s;
             pointer-events: none;
           `;
           document.getElementById('app').appendChild(tracking);
@@ -1417,22 +1226,15 @@
         tapeEffectTimeout = setTimeout(randomTapeEffect, 200);
       }
 
-      // ============================================================
-      // 16. DATA
-      // ============================================================
       function updateDate() {
         const now = new Date();
         const day = String(now.getDate()).padStart(2, '0');
         const month = String(now.getMonth() + 1).padStart(2, '0');
-        const year = now.getFullYear();
-        dateDisplay.textContent = `${month}/${day}/${year}`;
+        dateDisplay.textContent = `${month}/${day}/${now.getFullYear()}`;
       }
       updateDate();
       setInterval(updateDate, 60000);
 
-      // ============================================================
-      // 17. CLEANUP
-      // ============================================================
       window.addEventListener('beforeunload', () => {
         stopCamera();
         if (tapeEffectTimeout) clearTimeout(tapeEffectTimeout);
@@ -1441,20 +1243,14 @@
         if (zoomTimeout) clearTimeout(zoomTimeout);
       });
 
-      // Visibilidade da página
       document.addEventListener('visibilitychange', () => {
-        if (document.hidden && isRecording) {
-          stopRecording();
-        }
+        if (document.hidden && isRecording) stopRecording();
       });
 
-      // ============================================================
-      // 18. INICIALIZAÇÃO
-      // ============================================================
       updateOrientationButtons();
       randomTapeEffect();
 
-      console.log('📼 VHS Camera Profissional v2.0');
+      console.log('📼 VHS Camera Profissional v2.2');
     })();
   </script>
 </body>
