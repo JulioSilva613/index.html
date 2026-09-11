@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VHS Cam - Profissional</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background: #0a0a0a;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      color: #fff;
+      position: relative;
+      touch-action: none;
+    }
+
+    #app {
+      position: relative;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #vhsCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #111;
+      z-index: 1;
+    }
+
+    .zoom-indicator {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 15;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      padding: 4px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      letter-spacing: 1px;
+      border: 1px solid rgba(255,255,255,0.1);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-family: monospace;
+    }
+
+    .zoom-indicator.visible {
+      opacity: 1;
+    }
+
+    .ui-overlay {
+      position: absolute;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .ui-overlay .top {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+    }
+
+    .ui-overlay .top .rec-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ui-overlay .top .rec-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #555;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .ui-overlay .top .rec-dot.recording {
+      background: #ff2a2a;
+      box-shadow: 0 0 20px #ff0000;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .ui-overlay .top .rec-dot.recording-stopped {
+      background: #ffaa00;
+      box-shadow: 0 0 15px #ffaa00;
+    }
+
+    .ui-overlay .top .timer {
+      font-size: 18px;
+      letter-spacing: 2px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 2px 12px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+
+    .ui-overlay .top .date {
+      opacity: 0.7;
+      font-size: 13px;
+    }
+
+    .ui-overlay .mode {
+      position: absolute;
+      bottom: 140px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 12px;
+      letter-spacing: 3px;
+      opacity: 0.5;
+      text-shadow: 0 0 8px black;
+      pointer-events: none;
+    }
+
+    .ui-overlay .bottom {
+      position: absolute;
+      bottom: 35px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 40px;
+      pointer-events: auto;
+    }
+
+    .bottom button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 28px;
+      cursor: pointer;
+      pointer-events: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: transform 0.1s;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .bottom button:active {
+      transform: scale(0.88);
+    }
+
+    .bottom .capture-btn {
+      width: 85px;
+      height: 85px;
+      border-radius: 50%;
+      border: 4px solid rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.4), 0 0 35px rgba(255, 255, 255, 0.1);
+      font-size: 18px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.9);
+      transition: all 0.15s;
+    }
+
+    .bottom .capture-btn:active {
+      transform: scale(0.92);
+    }
+    
+    .bottom .capture-btn.recording-mode {
+      border-color: #ff2a2a;
+      box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.4), 0 0 45px rgba(255, 0, 0, 0.25);
+    }
+
+    .bottom .action-btn {
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+      background: rgba(20, 20, 20, 0.7);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 22px;
+    }
+
+    .mode-indicator {
+      position: absolute;
+      bottom: 125px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 15;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      padding: 4px 14px;
+      border-radius: 12px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      border: 1px solid rgba(255,255,255,0.08);
+      pointer-events: none;
+      font-family: monospace;
+      transition: all 0.3s;
+    }
+
+    .mode-indicator.photo-mode {
+      color: #4fc3f7;
+      border-color: rgba(79, 195, 247, 0.3);
+    }
+
+    .mode-indicator.video-mode {
+      color: #ff6b6b;
+      border-color: rgba(255, 107, 107, 0.3);
+    }
+
+    #settingsPanel {
+      position: absolute;
+      bottom: 160px;
+      right: 20px;
+      z-index: 20;
+      background: rgba(10, 10, 10, 0.92);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 20px;
+      border-radius: 8px;
+      width: 260px;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: auto;
+      font-size: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    #settingsPanel.open {
+      display: flex;
+    }
+
+    #settingsPanel h3 {
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-align: center;
+      margin-bottom: 2px;
+      opacity: 0.7;
+    }
+
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .setting-item label {
+      display: flex;
+      justify-content: space-between;
+      opacity: 0.6;
+      font-size: 11px;
+    }
+
+    .setting-item input[type="range"] {
+      width: 100%;
+      height: 3px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #333;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .setting-item input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255,255,255,0.2);
+    }
+
+    .settings-divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      margin: 4px 0;
+    }
+
+    .orientation-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    .orientation-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 11px;
+      transition: all 0.2s;
+      pointer-events: auto;
+      flex: 1;
+    }
+
+    .orientation-btn.active {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.4);
+      box-shadow: 0 0 15px rgba(255,255,255,0.05);
+    }
+
+    .orientation-btn:active {
+      transform: scale(0.95);
+    }
+
+    .orientation-btn .icon {
+      font-size: 16px;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .mode-toggle-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff;
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 11px;
+      transition: all 0.2s;
+      pointer-events: auto;
+      width: 100%;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    .mode-toggle-btn.photo {
+      color: #4fc3f7;
+      border-color: rgba(79, 195, 247, 0.3);
+      background: rgba(79, 195, 247, 0.05);
+    }
+
+    .mode-toggle-btn.video {
+      color: #ff6b6b;
+      border-color: rgba(255, 107, 107, 0.3);
+      background: rgba(255, 107, 107, 0.05);
+    }
+
+    .mode-toggle-btn:active {
+      transform: scale(0.96);
+    }
+
+    #startupScreen {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      background: #050505;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 20px;
+    }
+
+    #startupScreen h1 {
+      font-size: 52px;
+      letter-spacing: 8px;
+      font-weight: 100;
+    }
+
+    #startupScreen p {
+      font-size: 11px;
+      opacity: 0.4;
+      letter-spacing: 3px;
+    }
+
+    #startupScreen .start-btn {
+      padding: 14px 35px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-radius: 4px;
+      font-size: 14px;
+      pointer-events: auto;
+    }
+
+    #startupScreen .start-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Toast/Notificação */
+    .toast {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      z-index: 50;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      color: #fff;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+      text-align: center;
+      max-width: 90%;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #settingsPanel::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    #settingsPanel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #settingsPanel::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+    }
+
+    @media (max-width: 480px) {
+      .ui-overlay .top { font-size: 12px; top: 15px; left: 15px; right: 15px; }
+      .ui-overlay .bottom .capture-btn { width: 72px; height: 72px; }
+      .ui-overlay .bottom .action-btn { width: 48px; height: 48px; font-size: 18px; }
+      .ui-overlay .bottom { gap: 28px; bottom: 25px; }
+      #settingsPanel { width: 220px; right: 10px; padding: 15px; bottom: 130px; }
+      #startupScreen h1 { font-size: 38px; }
+      .orientation-buttons { flex-wrap: wrap; }
+      .orientation-btn { min-width: 60px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="vhsCanvas"></canvas>
+
+    <div class="zoom-indicator" id="zoomIndicator">1.0x</div>
+    <div class="mode-indicator photo-mode" id="modeIndicator">📷 FOTO</div>
+    <div class="toast" id="toast"></div>
+
+    <div class="ui-overlay">
+      <div class="top">
+        <div class="rec-indicator">
+          <span class="rec-dot" id="recDot"></span>
+          <span id="recText">STBY</span>
+          <span class="timer" id="timerDisplay" style="display: none;">00:00</span>
+        </div>
+        <span class="date" id="dateDisplay">00/00/0000</span>
+      </div>
+      <div class="mode">VHS • SP • NTSC</div>
+      <div class="bottom">
+        <button class="action-btn" id="switchCameraBtn" aria-label="Trocar câmera">↻</button>
+        <button class="capture-btn" id="captureBtn" aria-label="Capturar ou gravar">●</button>
+        <button class="action-btn" id="settingsBtn" aria-label="Configurações">⚙</button>
+      </div>
+    </div>
+
+    <div id="settingsPanel">
+      <h3>🎛️ CONTROLES VHS</h3>
+      
+      <hr class="settings-divider">
+      
+      <button class="mode-toggle-btn photo" id="modeToggleBtn">📷 MODO FOTO</button>
+      
+      <hr class="settings-divider">
+      
+      <div class="setting-item">
+        <label><span>🔄 Orientação</span></label>
+        <div class="orientation-buttons">
+          <button class="orientation-btn" id="flipHorizontal">
+            <span class="icon">↔</span>
+            Horizontal
+          </button>
+          <button class="orientation-btn" id="flipVertical">
+            <span class="icon">↕</span>
+            Vertical
+          </button>
+          <button class="orientation-btn" id="resetOrientation">
+            <span class="icon">⟳</span>
+            Reset
+          </button>
+        </div>
+      </div>
+      
+      <hr class="settings-divider">
+      
+      <div class="setting-item">
+        <label><span>🔍 Zoom</span><span id="zoomVal">1.0x</span></label>
+        <input type="range" id="zoomSlider" min="10" max="40" value="20">
+      </div>
+      
+      <hr class="settings-divider">
+      
+      <div class="setting-item">
+        <label><span>☀️ Iluminação</span><span id="brightnessVal">100%</span></label>
+        <input type="range" id="brightnessSlider" min="30" max="200" value="100">
+      </div>
+      
+      <div class="setting-item">
+        <label><span>🎨 Contraste</span><span id="contrastVal">100%</span></label>
+        <input type="range" id="contrastSlider" min="30" max="200" value="100">
+      </div>
+      
+      <hr class="settings-divider">
+      
+      <div class="setting-item">
+        <label><span>🔴 Vermelho</span><span id="redVal">100%</span></label>
+        <input type="range" id="redSlider" min="50" max="200" value="100">
+      </div>
+      
+      <div class="setting-item">
+        <label><span>🟢 Verde</span><span id="greenVal">100%</span></label>
+        <input type="range" id="greenSlider" min="50" max="200" value="100">
+      </div>
+      
+      <div class="setting-item">
+        <label><span>🔵 Azul</span><span id="blueVal">100%</span></label>
+        <input type="range" id="blueSlider" min="50" max="200" value="100">
+      </div>
+      
+      <hr class="settings-divider">
+      
+      <div class="setting-item">
+        <label><span>📺 Ruído</span><span id="noiseVal">15%</span></label>
+        <input type="range" id="noiseSlider" min="0" max="40" value="15">
+      </div>
+      
+      <div class="setting-item">
+        <label><span>🌈 Cromático</span><span id="chromaVal">20%</span></label>
+        <input type="range" id="chromaSlider" min="0" max="50" value="20">
+      </div>
+      
+      <div class="setting-item">
+        <label><span>📳 Trepidação</span><span id="jitterVal">8%</span></label>
+        <input type="range" id="jitterSlider" min="0" max="15" value="8">
+      </div>
+      
+      <div class="setting-item">
+        <label><span>〰️ Scanlines</span><span id="scanVal">12%</span></label>
+        <input type="range" id="scanSlider" min="0" max="30" value="12">
+      </div>
+    </div>
+
+    <div id="startupScreen">
+      <h1>VHS</h1>
+      <p>PROFESSIONAL CAMERA SYSTEM</p>
+      <button class="start-btn" id="startBtn">▶ INICIAR</button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      "use strict";
+
+      // ============================================================
+      // 1. ELEMENTOS E REFERÊNCIAS
+      // ============================================================
+      const canvas = document.getElementById('vhsCanvas');
+      const gl = canvas.getContext('webgl', { 
+        alpha: false, 
+        antialias: false,
+        preserveDrawingBuffer: true
+      });
+
+      const startupScreen = document.getElementById('startupScreen');
+      const startBtn = document.getElementById('startBtn');
+      const captureBtn = document.getElementById('captureBtn');
+      const switchCameraBtn = document.getElementById('switchCameraBtn');
+      const settingsBtn = document.getElementById('settingsBtn');
+      const settingsPanel = document.getElementById('settingsPanel');
+      const zoomIndicator = document.getElementById('zoomIndicator');
+      const modeIndicator = document.getElementById('modeIndicator');
+      const toast = document.getElementById('toast');
+
+      const recDot = document.getElementById('recDot');
+      const recText = document.getElementById('recText');
+      const timerDisplay = document.getElementById('timerDisplay');
+      const dateDisplay = document.getElementById('dateDisplay');
+
+      const flipHorizontalBtn = document.getElementById('flipHorizontal');
+      const flipVerticalBtn = document.getElementById('flipVertical');
+      const resetOrientationBtn = document.getElementById('resetOrientation');
+      const modeToggleBtn = document.getElementById('modeToggleBtn');
+
+      const zoomSlider = document.getElementById('zoomSlider');
+      const brightnessSlider = document.getElementById('brightnessSlider');
+      const contrastSlider = document.getElementById('contrastSlider');
+      const redSlider = document.getElementById('redSlider');
+      const greenSlider = document.getElementById('greenSlider');
+      const blueSlider = document.getElementById('blueSlider');
+      const noiseSlider = document.getElementById('noiseSlider');
+      const chromaSlider = document.getElementById('chromaSlider');
+      const jitterSlider = document.getElementById('jitterSlider');
+      const scanSlider = document.getElementById('scanSlider');
+
+      const zoomVal = document.getElementById('zoomVal');
+      const brightnessVal = document.getElementById('brightnessVal');
+      const contrastVal = document.getElementById('contrastVal');
+      const redVal = document.getElementById('redVal');
+      const greenVal = document.getElementById('greenVal');
+      const blueVal = document.getElementById('blueVal');
+      const noiseVal = document.getElementById('noiseVal');
+      const chromaVal = document.getElementById('chromaVal');
+      const jitterVal = document.getElementById('jitterVal');
+      const scanVal = document.getElementById('scanVal');
+
+      // ============================================================
+      // 2. ESTADO DA APLICAÇÃO
+      // ============================================================
+      let settings = {
+        zoom: 1.0,
+        brightness: 1.0,
+        contrast: 1.0,
+        red: 1.0,
+        green: 1.0,
+        blue: 1.0,
+        noise: 0.15,
+        chroma: 0.20,
+        jitter: 0.08,
+        scanlines: 0.12,
+        flipH: false,
+        flipV: false
+      };
+
+      let captureMode = 'photo';
+      let facingMode = 'environment';
+      let stream = null;
+      let isRecording = false;
+      let recordingStartTime = 0;
+      let timerInterval = null;
+      let mediaRecorder = null;
+      let recordedChunks = [];
+      let videoTexture = null;
+      let animationFrame = null;
+      let isCameraReady = false;
+      let zoomTimeout = null;
+      let toastTimeout = null;
+
+      // ============================================================
+      // 3. WEBGL SETUP
+      // ============================================================
+      function initWebGL() {
+        const vsSource = `
+          attribute vec2 aPosition;
+          varying vec2 vUv;
+          uniform float uFlipH;
+          uniform float uFlipV;
+          void main() {
+            gl_Position = vec4(aPosition, 0.0, 1.0);
+            vec2 uv = vec2(aPosition.x * 0.5 + 0.5, 1.0 - (aPosition.y * 0.5 + 0.5));
+            if (uFlipH > 0.5) uv.x = 1.0 - uv.x;
+            if (uFlipV > 0.5) uv.y = 1.0 - uv.y;
+            vUv = uv;
+          }
+        `;
+
+        const fsSource = `
+          precision highp float;
+          varying vec2 vUv;
+
+          uniform sampler2D uTexture;
+          uniform float uTime;
+          uniform float uZoom;
+          uniform float uBrightness;
+          uniform float uContrast;
+          uniform float uRed;
+          uniform float uGreen;
+          uniform float uBlue;
+          uniform float uNoise;
+          uniform float uChroma;
+          uniform float uJitter;
+          uniform float uScanlines;
+          uniform vec2 uResolution;
+
+          float random(vec2 st) {
+            return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+          }
+
+          void main() {
+            vec2 uv = vUv;
+            vec2 res = uResolution;
+            float time = uTime;
+
+            // ZOOM
+            vec2 center = vec2(0.5, 0.5);
+            float zoomFactor = 1.0 / uZoom;
+            uv = center + (uv - center) * zoomFactor;
+
+            if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+              gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+              return;
+            }
+
+            // JITTER
+            float jitterAmount = uJitter * 0.04;
+            float jitterX = (random(vec2(time * 0.1, floor(uv.y * 240.0))) - 0.5) * jitterAmount;
+            uv.x += jitterX;
+
+            // TRACKING
+            float trackingOffset = (random(vec2(time * 0.05, floor(uv.x * 320.0))) - 0.5) * 0.002;
+            uv.y += trackingOffset;
+
+            // ABERRAÇÃO CROMÁTICA
+            float chromaShift = uChroma * 0.008;
+            float r = texture2D(uTexture, uv + vec2(chromaShift, 0.0)).r;
+            float g = texture2D(uTexture, uv).g;
+            float b = texture2D(uTexture, uv - vec2(chromaShift, 0.0)).b;
+
+            vec3 color = vec3(r, g, b);
+
+            // CORES RGB
+            color.r *= uRed;
+            color.g *= uGreen;
+            color.b *= uBlue;
+
+            // CONTRASTE
+            color = (color - 0.5) * uContrast + 0.5;
+
+            // BRILHO
+            color *= uBrightness;
+
+            // ESTILO VHS
+            color.r *= 1.05;
+            color.b *= 0.92;
+
+            // SATURAÇÃO
+            float gray = dot(color, vec3(0.299, 0.587, 0.114));
+            color = mix(vec3(gray), color, 0.88);
+
+            // RUÍDO
+            float noise = (random(uv + time * 0.2) - 0.5) * uNoise * 0.35;
+            color += noise;
+
+            // FLICKER
+            float flicker = 1.0 + sin(time * 8.0) * 0.015;
+            color *= flicker;
+
+            // SCANLINES
+            float scanline = sin(uv.y * res.y * 0.5) * 0.5 + 0.5;
+            scanline = smoothstep(0.0, 0.3, scanline);
+            float scanIntensity = uScanlines * 0.25;
+            color *= (1.0 - scanIntensity) + scanline * scanIntensity;
+
+            // BORDAS SUAVES
+            vec2 distToEdge = 1.0 - abs(uv - 0.5) * 2.0;
+            float edge = min(distToEdge.x, distToEdge.y);
+            edge = smoothstep(0.0, 0.05, edge);
+            color *= edge;
+
+            gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+          }
+        `;
+
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vsSource);
+        gl.compileShader(vertexShader);
+        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+          console.error('Erro no Vertex Shader:', gl.getShaderInfoLog(vertexShader));
+        }
+
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fsSource);
+        gl.compileShader(fragmentShader);
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+          console.error('Erro no Fragment Shader:', gl.getShaderInfoLog(fragmentShader));
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          console.error('Erro ao linkar programa:', gl.getProgramInfoLog(program));
+        }
+
+        const positionLocation = gl.getAttribLocation(program, 'aPosition');
+        const textureLocation = gl.getUniformLocation(program, 'uTexture');
+        const timeLocation = gl.getUniformLocation(program, 'uTime');
+        const flipHLocation = gl.getUniformLocation(program, 'uFlipH');
+        const flipVLocation = gl.getUniformLocation(program, 'uFlipV');
+        const zoomLocation = gl.getUniformLocation(program, 'uZoom');
+        const brightnessLocation = gl.getUniformLocation(program, 'uBrightness');
+        const contrastLocation = gl.getUniformLocation(program, 'uContrast');
+        const redLocation = gl.getUniformLocation(program, 'uRed');
+        const greenLocation = gl.getUniformLocation(program, 'uGreen');
+        const blueLocation = gl.getUniformLocation(program, 'uBlue');
+        const noiseLocation = gl.getUniformLocation(program, 'uNoise');
+        const chromaLocation = gl.getUniformLocation(program, 'uChroma');
+        const jitterLocation = gl.getUniformLocation(program, 'uJitter');
+        const scanLocation = gl.getUniformLocation(program, 'uScanlines');
+        const resolutionLocation = gl.getUniformLocation(program, 'uResolution');
+
+        const positions = new Float32Array([
+          -1.0, -1.0,
+           1.0, -1.0,
+          -1.0,  1.0,
+           1.0,  1.0
+        ]);
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+        videoTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+        return {
+          program,
+          positionLocation,
+          textureLocation,
+          timeLocation,
+          flipHLocation,
+          flipVLocation,
+          zoomLocation,
+          brightnessLocation,
+          contrastLocation,
+          redLocation,
+          greenLocation,
+          blueLocation,
+          noiseLocation,
+          chromaLocation,
+          jitterLocation,
+          scanLocation,
+          resolutionLocation,
+          positionBuffer
+        };
+      }
+
+      let glProgram = null;
+      let videoElement = null;
+
+      // ============================================================
+      // 4. FUNÇÕES PRINCIPAIS
+      // ============================================================
+
+      function resizeCanvas() {
+        const container = document.getElementById('app');
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        canvas.width = w;
+        canvas.height = h;
+        gl.viewport(0, 0, w, h);
+      }
+
+      async function startCamera() {
+        try {
+          if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+          }
+
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: facingMode,
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              frameRate: { ideal: 30 }
+            },
+            audio: {
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false
+            }
+          });
+
+          if (!videoElement) {
+            videoElement = document.createElement('video');
+            videoElement.autoplay = true;
+            videoElement.playsInline = true;
+            videoElement.muted = false;
+          }
+          videoElement.srcObject = stream;
+          await videoElement.play();
+          
+          isCameraReady = true;
+
+          startupScreen.style.display = 'none';
+
+          if (!glProgram) {
+            glProgram = initWebGL();
+            resizeCanvas();
+          }
+
+          if (animationFrame) cancelAnimationFrame(animationFrame);
+          renderFrame();
+
+          updateDate();
+
+        } catch (error) {
+          console.error('Erro ao acessar câmera:', error);
+          alert('Não foi possível acessar a câmera. Verifique as permissões.');
+        }
+      }
+
+      function renderFrame(time = 0) {
+        if (!glProgram || !videoElement || !isCameraReady) {
+          animationFrame = requestAnimationFrame(renderFrame);
+          return;
+        }
+
+        const { program, positionLocation, textureLocation, timeLocation,
+                flipHLocation, flipVLocation,
+                zoomLocation, brightnessLocation, contrastLocation,
+                redLocation, greenLocation, blueLocation,
+                noiseLocation, chromaLocation, jitterLocation, scanLocation,
+                resolutionLocation, positionBuffer } = glProgram;
+
+        if (videoElement.readyState >= videoElement.HAVE_CURRENT_DATA) {
+          gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoElement);
+        }
+
+        const w = canvas.width;
+        const h = canvas.height;
+        gl.viewport(0, 0, w, h);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(program);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        gl.uniform1i(textureLocation, 0);
+        gl.uniform1f(timeLocation, time / 1000);
+        gl.uniform1f(flipHLocation, settings.flipH ? 1.0 : 0.0);
+        gl.uniform1f(flipVLocation, settings.flipV ? 1.0 : 0.0);
+        gl.uniform1f(zoomLocation, settings.zoom);
+        gl.uniform1f(brightnessLocation, settings.brightness);
+        gl.uniform1f(contrastLocation, settings.contrast);
+        gl.uniform1f(redLocation, settings.red);
+        gl.uniform1f(greenLocation, settings.green);
+        gl.uniform1f(blueLocation, settings.blue);
+        gl.uniform1f(noiseLocation, settings.noise);
+        gl.uniform1f(chromaLocation, settings.chroma);
+        gl.uniform1f(jitterLocation, settings.jitter);
+        gl.uniform1f(scanLocation, settings.scanlines);
+        gl.uniform2f(resolutionLocation, w, h);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        animationFrame = requestAnimationFrame(renderFrame);
+      }
+
+      // ============================================================
+      // 5. CAPTURA E SALVAMENTO
+      // ============================================================
+
+      function showToast(message, duration = 2500) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          toast.classList.remove('show');
+        }, duration);
+      }
+
+      function getCanvasBlob() {
+        return new Promise((resolve) => {
+          const w = canvas.width;
+          const h = canvas.height;
+          const pixels = new Uint8Array(w * h * 4);
+          gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = w;
+          tempCanvas.height = h;
+          const tempCtx = tempCanvas.getContext('2d');
+          const imageData = new ImageData(pixels, w, h);
+          const invertedData = new ImageData(w, h);
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              const srcIdx = (y * w + x) * 4;
+              const dstIdx = ((h - 1 - y) * w + x) * 4;
+              invertedData.data[dstIdx] = imageData.data[srcIdx];
+              invertedData.data[dstIdx + 1] = imageData.data[srcIdx + 1];
+              invertedData.data[dstIdx + 2] = imageData.data[srcIdx + 2];
+              invertedData.data[dstIdx + 3] = 255;
+            }
+          }
+          tempCtx.putImageData(invertedData, 0, 0);
+          tempCanvas.toBlob(resolve, 'image/png');
+        });
+      }
+
+      function downloadBlob(blob, fileName) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
+
+      async function takePhoto() {
+        if (isRecording) return;
+
+        try {
+          const blob = await getCanvasBlob();
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const fileName = `VHS_FOTO_${timestamp}.png`;
+          downloadBlob(blob, fileName);
+          showToast(`✅ Foto salva: ${fileName}`, 3000);
+
+          // Flash
+          const flash = document.createElement('div');
+          flash.style.cssText = 'position:absolute;inset:0;z-index:50;background:white;opacity:0.8;pointer-events:none;transition:opacity 0.15s;';
+          document.getElementById('app').appendChild(flash);
+          setTimeout(() => { flash.style.opacity = '0'; }, 50);
+          setTimeout(() => { flash.remove(); }, 300);
+
+          if (navigator.vibrate) navigator.vibrate(30);
+        } catch (error) {
+          console.error('Erro ao tirar foto:', error);
+          showToast('❌ Erro ao tirar foto', 2000);
+        }
+      }
+
+      function startRecording() {
+        if (isRecording) return;
+        if (!stream) return;
+
+        const canvasStream = canvas.captureStream(30);
+        const audioTracks = stream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          canvasStream.addTrack(audioTracks[0]);
+        }
+
+        const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+        let mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || 'video/webm';
+
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(canvasStream, {
+          mimeType: mimeType,
+          videoBitsPerSecond: 5000000
+        });
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const fileName = `VHS_VIDEO_${timestamp}.webm`;
+          downloadBlob(blob, fileName);
+          showToast(`✅ Vídeo salvo: ${fileName}`, 3000);
+          recordedChunks = [];
+        };
+
+        mediaRecorder.start(1000);
+        isRecording = true;
+
+        recDot.className = 'rec-dot recording';
+        recText.textContent = 'REC';
+        captureBtn.textContent = '⏹';
+        captureBtn.classList.add('recording-mode');
+        timerDisplay.style.display = 'inline';
+        recordingStartTime = Date.now();
+
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+          const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+          const secs = String(elapsed % 60).padStart(2, '0');
+          timerDisplay.textContent = `${mins}:${secs}`;
+        }, 500);
+
+        showToast('🎥 Gravando...', 1000);
+        if (navigator.vibrate) navigator.vibrate(50);
+      }
+
+      function stopRecording() {
+        if (!isRecording || !mediaRecorder) return;
+        
+        try {
+          mediaRecorder.stop();
+        } catch (e) {
+          console.warn('Erro ao parar gravação:', e);
+        }
+        
+        isRecording = false;
+
+        recDot.className = 'rec-dot';
+        recText.textContent = 'STBY';
+        captureBtn.textContent = '●';
+        captureBtn.classList.remove('recording-mode');
+        timerDisplay.style.display = 'none';
+        clearInterval(timerInterval);
+        timerDisplay.textContent = '00:00';
+
+        showToast('💾 Salvando vídeo...', 2000);
+        if (navigator.vibrate) navigator.vibrate(50);
+      }
+
+      function handleCapture() {
+        if (isRecording) {
+          stopRecording();
+          return;
+        }
+
+        if (captureMode === 'photo') {
+          takePhoto();
+        } else {
+          startRecording();
+        }
+      }
+
+      // ============================================================
+      // 6. ZOOM COM GESTOS DE PINÇA
+      // ============================================================
+      let lastTouchDistance = 0;
+      let initialZoom = 1.0;
+
+      function getTouchDistance(touches) {
+        if (touches.length < 2) return 0;
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          lastTouchDistance = getTouchDistance(e.touches);
+          initialZoom = settings.zoom;
+          zoomIndicator.classList.add('visible');
+          zoomIndicator.textContent = settings.zoom.toFixed(1) + 'x';
+        }
+      });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          const distance = getTouchDistance(e.touches);
+          const delta = distance - lastTouchDistance;
+          const zoomDelta = delta * 0.01;
+          
+          let newZoom = Math.max(0.5, Math.min(4.0, initialZoom + zoomDelta));
+          settings.zoom = newZoom;
+          
+          const sliderVal = Math.round((newZoom - 0.5) / 3.5 * 30 + 10);
+          zoomSlider.value = Math.min(40, Math.max(10, sliderVal));
+          zoomVal.textContent = newZoom.toFixed(1) + 'x';
+          
+          zoomIndicator.textContent = newZoom.toFixed(1) + 'x';
+          zoomIndicator.classList.add('visible');
+          
+          if (zoomTimeout) clearTimeout(zoomTimeout);
+          zoomTimeout = setTimeout(() => {
+            zoomIndicator.classList.remove('visible');
+          }, 1000);
+        }
+      });
+
+      canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+          setTimeout(() => {
+            zoomIndicator.classList.remove('visible');
+          }, 500);
+        }
+      });
+
+      // ============================================================
+      // 7. EVENT LISTENERS
+      // ============================================================
+
+      startBtn.addEventListener('click', startCamera);
+
+      captureBtn.addEventListener('click', handleCapture);
+
+      switchCameraBtn.addEventListener('click', async () => {
+        facingMode = facingMode === 'environment' ? 'user' : 'environment';
+        await startCamera();
+        if (navigator.vibrate) navigator.vibrate(20);
+      });
+
+      settingsBtn.addEventListener('click', () => {
+        settingsPanel.classList.toggle('open');
+        if (navigator.vibrate) navigator.vibrate(15);
+      });
+
+      // ============================================================
+      // 8. MODO DE CAPTURA
+      // ============================================================
+      modeToggleBtn.addEventListener('click', () => {
+        if (isRecording) {
+          stopRecording();
+        }
+        
+        if (captureMode === 'photo') {
+          captureMode = 'video';
+          modeToggleBtn.textContent = '🎥 MODO VÍDEO';
+          modeToggleBtn.className = 'mode-toggle-btn video';
+          modeIndicator.textContent = '🎥 VÍDEO';
+          modeIndicator.className = 'mode-indicator video-mode';
+        } else {
+          captureMode = 'photo';
+          modeToggleBtn.textContent = '📷 MODO FOTO';
+          modeToggleBtn.className = 'mode-toggle-btn photo';
+          modeIndicator.textContent = '📷 FOTO';
+          modeIndicator.className = 'mode-indicator photo-mode';
+        }
+        
+        if (navigator.vibrate) navigator.vibrate(20);
+      });
+
+      // ============================================================
+      // 9. ORIENTAÇÃO
+      // ============================================================
+      
+      function updateOrientationButtons() {
+        flipHorizontalBtn.classList.toggle('active', settings.flipH);
+        flipVerticalBtn.classList.toggle('active', settings.flipV);
+      }
+
+      flipHorizontalBtn.addEventListener('click', () => {
+        settings.flipH = !settings.flipH;
+        updateOrientationButtons();
+        if (navigator.vibrate) navigator.vibrate(15);
+      });
+
+      flipVerticalBtn.addEventListener('click', () => {
+        settings.flipV = !settings.flipV;
+        updateOrientationButtons();
+        if (navigator.vibrate) navigator.vibrate(15);
+      });
+
+      resetOrientationBtn.addEventListener('click', () => {
+        settings.flipH = false;
+        settings.flipV = false;
+        updateOrientationButtons();
+        if (navigator.vibrate) navigator.vibrate(15);
+      });
+
+      // ============================================================
+      // 10. SLIDERS
+      // ============================================================
+
+      function updateSetting(slider, display, key, transform = (v) => v, format = (v) => `${Math.round(v * 100)}%`) {
+        slider.addEventListener('input', () => {
+          const rawVal = parseFloat(slider.value);
+          const val = transform(rawVal);
+          settings[key] = val;
+          display.textContent = format(val);
+          
+          if (key === 'zoom') {
+            zoomIndicator.textContent = val.toFixed(1) + 'x';
+            zoomIndicator.classList.add('visible');
+            if (zoomTimeout) clearTimeout(zoomTimeout);
+            zoomTimeout = setTimeout(() => {
+              zoomIndicator.classList.remove('visible');
+            }, 800);
+          }
+        });
+      }
+
+      updateSetting(zoomSlider, zoomVal, 'zoom', 
+        (v) => 0.5 + (v - 10) / 30 * 3.5,
+        (v) => v.toFixed(1) + 'x'
+      );
+
+      updateSetting(brightnessSlider, brightnessVal, 'brightness', (v) => v / 100);
+      updateSetting(contrastSlider, contrastVal, 'contrast', (v) => v / 100);
+      updateSetting(redSlider, redVal, 'red', (v) => v / 100);
+      updateSetting(greenSlider, greenVal, 'green', (v) => v / 100);
+      updateSetting(blueSlider, blueVal, 'blue', (v) => v / 100);
+      updateSetting(noiseSlider, noiseVal, 'noise', (v) => v / 100);
+      updateSetting(chromaSlider, chromaVal, 'chroma', (v) => v / 100);
+      updateSetting(jitterSlider, jitterVal, 'jitter', (v) => v / 100);
+      updateSetting(scanSlider, scanVal, 'scanlines', (v) => v / 100);
+
+      window.addEventListener('resize', resizeCanvas);
+
+      // ============================================================
+      // 11. INICIALIZAÇÃO
+      // ============================================================
+      resizeCanvas();
+      updateOrientationButtons();
+
+      // Efeitos aleatórios de fita
+      function randomTapeEffect() {
+        if (Math.random() < 0.005) {
+          const tracking = document.createElement('div');
+          tracking.style.cssText = `
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            z-index: 8;
+            background: rgba(255,255,255,0.6);
+            box-shadow: 0 0 15px rgba(255,255,255,0.8);
+            top: ${5 + Math.random() * 85}%;
+            opacity: 1;
+            transition: all 0.3s;
+            pointer-events: none;
+          `;
+          document.getElementById('app').appendChild(tracking);
+          setTimeout(() => {
+            tracking.style.opacity = '0';
+            tracking.style.transform = 'translateY(20px)';
+          }, 100);
+          setTimeout(() => tracking.remove(), 500);
+        }
+        setTimeout(randomTapeEffect, 200);
+      }
+      randomTapeEffect();
+
+      function updateDate() {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        dateDisplay.textContent = `${month}/${day}/${year}`;
+      }
+      updateDate();
+
+      console.log('📼 VHS Camera Profissional - Versão Otimizada');
+    })();
+  </script>
+</body>
+</html>
