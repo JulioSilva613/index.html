@@ -506,11 +506,129 @@
       let tapeEffectTimeout = null;
       let isStarting = false;
       let lastFrameTime = 0;
-      let cameraWarmupUntil = 0; // timestamp até quando ignorar frames de warm-up
+      let cameraWarmupUntil = 0;
 
-      // Resolução interna fixa (mesma para ambas as câmeras → FPS igual)
+      // Cache de dispositivos de vídeo (para escolher a câmera traseira principal)
+      let videoDevices = [];
+      // ID do dispositivo da câmera traseira "principal" (a que tem torch/lanterna)
+      let mainBackDeviceId = null;
+
       const RENDER_W = 1280;
       const RENDER_H = 720;
+
+      // ============================================================
+      // DETECÇÃO DA CÂMERA TRASEIRA PRINCIPAL
+      // ============================================================
+      // Estratégia: enumerar todos os videoinput, e para cada um que
+      // pareça ser traseiro, abrir temporariamente um stream e checar
+      // se a track suporta 'torch' (lanterna). A câmera traseira
+      // principal do Android geralmente é a única com lanterna.
+      async function detectMainBackCamera() {
+        try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+            return null;
+          }
+
+          // Precisa de permissão primeiro para obter labels
+          try {
+            const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            tempStream.getTracks().forEach(t => t.stop());
+          } catch (e) {
+            console.warn('Permissão de câmera negada:', e);
+            return null;
+          }
+
+          videoDevices = (await navigator.mediaDevices.enumerateDevices())
+            .filter(d => d.kind === 'videoinput');
+
+          console.log(`📱 ${videoDevices.length} câmera(s) encontrada(s):`);
+          videoDevices.forEach((d, i) => {
+            console.log(`  [${i}] ${d.label || '(sem label)'} | id=${d.deviceId.substring(0, 12)}...`);
+          });
+
+          // Se só tem 1 câmera, não há o que escolher
+          if (videoDevices.length <= 1) return videoDevices[0]?.deviceId || null;
+
+          // Filtrar candidatos a "traseira" pelo label
+          // Labels comuns: "camera2 0, facing back", "Back Camera", "Traseira", etc.
+          const backCandidates = videoDevices.filter(d => {
+            const label = (d.label || '').toLowerCase();
+            if (!label) return false;
+            // Exclui frontal
+            if (label.includes('front') || label.includes('user') ||
+                label.includes('frontal') || label.includes('face')) return false;
+            // Inclui traseira
+            return label.includes('back') || label.includes('rear') ||
+                   label.includes('environment') || label.includes('traseira') ||
+                   label.includes('camera2 0') || label.includes('camera 0');
+          });
+
+          console.log(`🎯 ${backCandidates.length} candidata(s) a câmera traseira`);
+
+          // Se não achou por label, usa todos os dispositivos como candidatos
+          const candidates = backCandidates.length > 0 ? backCandidates : videoDevices;
+
+          // Para cada candidata, abrir um stream curto e checar por 'torch'
+          let bestDevice = null;
+          let bestScore = -1;
+
+          for (const device of candidates) {
+            try {
+              const testStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                  deviceId: { exact: device.deviceId },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 }
+                }
+              });
+
+              const track = testStream.getVideoTracks()[0];
+              const caps = track.getCapabilities ? track.getCapabilities() : {};
+              const settings = track.getSettings ? track.getSettings() : {};
+
+              // Pontuação:
+              // +100 se suporta torch (quase certo que é a principal)
+              // +50 se suporta zoom range amplo (câmera principal tem zoom)
+              // +30 se suporta focusMode (principal tem autofocus)
+              // +10 por resolução alta
+              let score = 0;
+              if (caps.torch) score += 100;
+              if (caps.zoom && caps.zoom.max > 2) score += 50;
+              if (caps.focusMode && caps.focusMode.length > 0) score += 30;
+              if (settings.width >= 1280 && settings.height >= 720) score += 10;
+              if (settings.width >= 1920 && settings.height >= 1080) score += 15;
+
+              console.log(`  Candidata "${device.label}":`, {
+                width: settings.width,
+                height: settings.height,
+                torch: !!caps.torch,
+                zoomMax: caps.zoom?.max,
+                focusMode: caps.focusMode,
+                score
+              });
+
+              testStream.getTracks().forEach(t => t.stop());
+
+              if (score > bestScore) {
+                bestScore = score;
+                bestDevice = device;
+              }
+            } catch (e) {
+              console.warn(`  Falha ao testar "${device.label}":`, e.message);
+            }
+          }
+
+          if (bestDevice) {
+            console.log(`✅ Câmera traseira escolhida: "${bestDevice.label}" (score ${bestScore})`);
+            return bestDevice.deviceId;
+          }
+
+          return null;
+        } catch (e) {
+          console.warn('Erro na detecção de câmera:', e);
+          return null;
+        }
+      }
 
       // ============================================================
       // WEBGL
@@ -530,10 +648,6 @@
           }
         `;
 
-        // Shader com:
-        //  - Denoise suave (média 3x3 leve) para compensar ruído da câmera traseira
-        //  - Sharpen leve (unsharp mask) para compensar downscale
-        //  - Filtros VHS aplicados DEPOIS da limpeza
         const fsSource = `
           precision mediump float;
           varying vec2 vUv;
@@ -556,14 +670,12 @@
             return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
           }
 
-          // Denoise 3x3 rápido (só 5 amostras em cruz — mais barato)
           vec3 denoise(vec2 uv) {
             vec3 c = texture2D(uTexture, uv).rgb;
             vec3 n = texture2D(uTexture, uv + vec2(0.0, uTexel.y)).rgb;
             vec3 s = texture2D(uTexture, uv - vec2(0.0, uTexel.y)).rgb;
             vec3 e = texture2D(uTexture, uv + vec2(uTexel.x, 0.0)).rgb;
             vec3 w = texture2D(uTexture, uv - vec2(uTexel.x, 0.0)).rgb;
-            // Média ponderada: centro pesa mais
             return c * 0.4 + (n + s + e + w) * 0.15;
           }
 
@@ -571,7 +683,6 @@
             vec2 uv = vUv;
             float time = uTime;
 
-            // Zoom
             vec2 center = vec2(0.5, 0.5);
             uv = center + (uv - center) * (1.0 / uZoom);
 
@@ -580,58 +691,42 @@
               return;
             }
 
-            // Ruído pseudoaleatório único por pixel (economiza)
             float rnd = random(vec2(time * 0.1, floor(uv.y * 240.0)));
 
-            // Jitter horizontal
             uv.x += (rnd - 0.5) * uJitter * 0.04;
-
-            // Tracking vertical
             uv.y += (rnd - 0.5) * 0.0015;
 
-            // ---- Limpeza da imagem (só na câmera traseira, mas aplicamos em ambas para uniformidade) ----
-            // Se o denoise ficar muito pesado, reduza o mix abaixo.
             vec3 centerSample = texture2D(uTexture, uv).rgb;
             vec3 denoised = denoise(uv);
-            // 55% original + 45% denoised (preserva detalhe mas limpa ruído)
             vec3 cleaned = mix(centerSample, denoised, 0.45);
 
-            // Sharpen (unsharp mask leve)
             vec3 blur = denoise(uv);
             vec3 sharpened = cleaned + (cleaned - blur) * 0.35;
 
-            // Aberração cromática sobre a imagem limpa
             float chromaShift = uChroma * 0.006;
             float r = texture2D(uTexture, uv + vec2(chromaShift, 0.0)).r;
             float g = sharpened.g;
             float b = texture2D(uTexture, uv - vec2(chromaShift, 0.0)).b;
             vec3 color = vec3(r, g, b);
 
-            // Canais RGB
             color.r *= uRed;
             color.g *= uGreen;
             color.b *= uBlue;
 
-            // Contraste e brilho
             color = (color - 0.5) * uContrast + 0.5;
             color *= uBrightness;
 
-            // Tom VHS
             color.r *= 1.04;
             color.b *= 0.94;
 
-            // Saturação
             float gray = dot(color, vec3(0.299, 0.587, 0.114));
             color = mix(vec3(gray), color, 0.9);
 
-            // Ruído VHS
             float noise = (rnd - 0.5) * uNoise * 0.3;
             color += noise;
 
-            // Flicker
             color *= 1.0 + sin(time * 8.0) * 0.012;
 
-            // Scanlines
             float scanline = sin(uv.y * uResolution.y * 0.6);
             color *= 1.0 - uScanlines * 0.15 * (scanline * 0.5 + 0.5);
 
@@ -713,8 +808,6 @@
       // ============================================================
       function drawFrame(time) {
         if (!glProgram || !videoElement || !isCameraReady) return;
-
-        // Ignora frames durante warm-up da câmera (evita frames pretos/borrados)
         if (performance.now() < cameraWarmupUntil) return;
 
         const p = glProgram;
@@ -750,7 +843,7 @@
         gl.uniform1f(p.jitterLocation, settings.jitter);
         gl.uniform1f(p.scanLocation, settings.scanlines);
         gl.uniform2f(p.resolutionLocation, RENDER_W, RENDER_H);
-        // Texel size para o denoise (1 pixel do vídeo original)
+
         const vw = videoElement.videoWidth || 1280;
         const vh = videoElement.videoHeight || 720;
         gl.uniform2f(p.texelLocation, 1.0 / vw, 1.0 / vh);
@@ -760,18 +853,16 @@
 
       function renderLoop(time) {
         if (!isRendering) return;
-
         const elapsed = time - lastFrameTime;
         if (elapsed >= 30) {
           lastFrameTime = time;
           drawFrame(time);
         }
-
         animationFrame = requestAnimationFrame(renderLoop);
       }
 
       // ============================================================
-      // CÂMERA — resolução IGUAL para ambas (720p)
+      // CÂMERA
       // ============================================================
       async function startCamera() {
         if (isStarting) return;
@@ -781,33 +872,86 @@
           if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
           if (videoElement) videoElement.srcObject = null;
 
-          // 720p exato para AMBAS as câmeras → mesmo FPS, mesma qualidade
-          // Em muitos celulares, forçar 720p na traseira evita o modo 1080p@15fps
-          const constraints = {
-            video: {
-              facingMode: { ideal: facingMode },
-              width: { exact: 1280 },
-              height: { exact: 720 },
-              frameRate: { ideal: 30, max: 30 }
-            },
-            audio: {
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false
+          let constraints;
+
+          if (facingMode === 'environment' && mainBackDeviceId) {
+            // Câmera traseira principal já detectada → usa deviceId exato
+            constraints = {
+              video: {
+                deviceId: { exact: mainBackDeviceId },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30, max: 30 }
+              },
+              audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+              }
+            };
+            console.log('🎥 Abrindo câmera traseira principal (deviceId fixo)');
+          } else if (facingMode === 'environment') {
+            // Primeira vez abrindo traseira: tenta detectar a principal
+            console.log('🔍 Detectando câmera traseira principal...');
+            const deviceId = await detectMainBackCamera();
+            if (deviceId) {
+              mainBackDeviceId = deviceId;
+              constraints = {
+                video: {
+                  deviceId: { exact: deviceId },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                  frameRate: { ideal: 30, max: 30 }
+                },
+                audio: {
+                  echoCancellation: false,
+                  noiseSuppression: false,
+                  autoGainControl: false
+                }
+              };
+            } else {
+              // Fallback: usa facingMode simples
+              constraints = {
+                video: {
+                  facingMode: { ideal: 'environment' },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                  frameRate: { ideal: 30 }
+                },
+                audio: {
+                  echoCancellation: false,
+                  noiseSuppression: false,
+                  autoGainControl: false
+                }
+              };
             }
-          };
+          } else {
+            // Frontal
+            constraints = {
+              video: {
+                facingMode: { ideal: 'user' },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30, max: 30 }
+              },
+              audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+              }
+            };
+          }
 
           try {
             stream = await navigator.mediaDevices.getUserMedia(constraints);
           } catch (e) {
-            // Fallback: alguns devices não suportam "exact" — tenta "ideal"
-            console.warn('Fallback para constraints ideais:', e);
+            console.warn('Falha com constraints específicas, tentando fallback:', e);
+            // Fallback genérico
             stream = await navigator.mediaDevices.getUserMedia({
               video: {
                 facingMode: { ideal: facingMode },
                 width: { ideal: 1280 },
-                height: { ideal: 720 },
-                frameRate: { ideal: 30 }
+                height: { ideal: 720 }
               },
               audio: {
                 echoCancellation: false,
@@ -837,7 +981,6 @@
           await videoElement.play().catch(() => {});
           isCameraReady = true;
 
-          // Warm-up: aguarda ~400ms para a câmera estabilizar exposição/foco
           cameraWarmupUntil = performance.now() + 400;
 
           if (!glProgram) {
@@ -858,7 +1001,17 @@
           startupScreen.classList.add('hidden');
           updateDate();
 
-          console.log(`📷 Câmera ativa: ${facingMode} @ ${videoElement.videoWidth}x${videoElement.videoHeight}`);
+          // Log de diagnóstico
+          const track = stream.getVideoTracks()[0];
+          const trackSettings = track.getSettings ? track.getSettings() : {};
+          const trackCaps = track.getCapabilities ? track.getCapabilities() : {};
+          console.log(`📷 Câmera ativa: ${facingMode}`, {
+            label: track.label,
+            resolucao: `${trackSettings.width}x${trackSettings.height}`,
+            fps: trackSettings.frameRate,
+            torch: !!trackCaps.torch,
+            zoomMax: trackCaps.zoom?.max
+          });
 
         } catch (error) {
           console.error('Erro ao acessar câmera:', error);
@@ -887,7 +1040,7 @@
       }
 
       // ============================================================
-      // CAPTURA DE FOTO
+      // CAPTURA
       // ============================================================
       function captureFrame() {
         drawFrame(performance.now());
@@ -1247,10 +1400,18 @@
         if (document.hidden && isRecording) stopRecording();
       });
 
+      // Detecta mudança de dispositivos (ex: câmera conectada/desconectada)
+      if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+        navigator.mediaDevices.addEventListener('devicechange', () => {
+          console.log('🔄 Dispositivos mudaram, invalidando cache da câmera');
+          mainBackDeviceId = null;
+        });
+      }
+
       updateOrientationButtons();
       randomTapeEffect();
 
-      console.log('📼 VHS Camera Profissional v2.2');
+      console.log('📼 VHS Camera Profissional v2.3');
     })();
   </script>
 </body>
